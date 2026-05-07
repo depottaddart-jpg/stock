@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Flux de Stock</title>
+    <title>Dashboard Flux de Stock Pro</title>
     <!-- CDNs -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -37,9 +37,18 @@
             padding: 1.5rem;
         }
 
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.025em; color: var(--primary-color); }
+
         /* Empty State */
         #empty-state {
-            height: 100vh;
+            height: 80vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -61,15 +70,20 @@
         button {
             background-color: var(--primary-color);
             color: white;
-            padding: 1rem 2rem;
+            padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 1rem;
+            border-radius: 0.75rem;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         button:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); }
+        button.secondary { background-color: white; color: var(--text-color); border: 1px solid var(--border-color); box-shadow: none; }
+        button.secondary:hover { background-color: #f9fafb; border-color: #d1d5db; transform: none; box-shadow: none; }
 
         /* Dashboard Layout */
         #dashboard { display: none; }
@@ -125,6 +139,7 @@
             border-radius: 1.25rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
             border-top: 4px solid var(--primary-color);
+            position: relative;
         }
 
         .kpi-card h3 {
@@ -137,6 +152,17 @@
         }
         .kpi-card .value { font-size: 2.25rem; font-weight: 900; margin-bottom: 0.5rem; line-height: 1; letter-spacing: -0.05em; }
         .kpi-card .subtext { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+
+        .trend {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 2rem;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        .trend-up { background: #ecfdf5; color: #059669; }
+        .trend-down { background: #fef2f2; color: #dc2626; }
 
         /* Charts */
         .grid-layout {
@@ -297,107 +323,116 @@
     </style>
 </head>
 <body>
-    <div id="empty-state" class="container">
-        <div class="upload-box">
-            <h1>Analyse de Flux de Stock</h1>
-            <p>Veuillez charger un fichier Excel (.xlsx ou .csv) pour commencer l'analyse.</p>
-            <input type="file" id="file-upload" accept=".xlsx, .csv" hidden>
-            <button onclick="document.getElementById('file-upload').click()">Uploader un fichier depuis le PC</button>
-        </div>
-    </div>
-
-    <div id="dashboard" class="container">
-        <nav class="tabs">
-            <button class="tab-link active" onclick="openTab(event, 'vue-globale')">Vue globale</button>
-            <button class="tab-link" onclick="openTab(event, 'par-reference')">Par référence</button>
-            <button class="tab-link" onclick="openTab(event, 'evolution-mensuelle')">Évolution mensuelle</button>
-            <button class="tab-link" onclick="openTab(event, 'transactions')">Transactions</button>
-        </nav>
-
-        <!-- VUE GLOBALE -->
-        <div id="vue-globale" class="tab-content active">
-            <div class="kpi-grid" id="global-kpis"></div>
-
-            <div class="chart-card full-width-chart">
-                <h4>Net par référence</h4>
-                <canvas id="global-net-ref-chart" height="80"></canvas>
+    <div class="container">
+        <header>
+            <div class="logo">STOCKFLUX PRO</div>
+            <div id="header-actions" style="display: none;">
+                <button class="secondary" onclick="resetDashboard()">Réinitialiser</button>
             </div>
+        </header>
 
-            <div class="chart-card full-width-chart">
-                <h4>Entrées vs Sorties – Évolution mensuelle</h4>
-                <canvas id="global-chart" height="80"></canvas>
-            </div>
-
-            <div class="grid-layout">
-                <div class="chart-card">
-                    <h4>Solde net mensuel</h4>
-                    <canvas id="net-monthly-chart" height="150"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h4>Nombre de transactions / mois</h4>
-                    <canvas id="trans-monthly-chart" height="150"></canvas>
-                </div>
+        <div id="empty-state">
+            <div class="upload-box">
+                <h1>Analyse de Flux de Stock</h1>
+                <p>Veuillez charger un fichier Excel (.xlsx ou .csv) pour commencer l'analyse.</p>
+                <input type="file" id="file-upload" accept=".xlsx, .csv" hidden>
+                <button onclick="document.getElementById('file-upload').click()">Uploader un fichier depuis le PC</button>
             </div>
         </div>
 
-        <!-- PAR RÉFÉRENCE -->
-        <div id="par-reference" class="tab-content">
-            <div class="ref-grid" id="ref-container"></div>
-            <div class="grid-layout">
-                <div class="chart-card">
-                    <h4>Entrées et sorties par référence</h4>
-                    <canvas id="ref-bars-chart" height="150"></canvas>
-                </div>
-                <div class="chart-card">
+        <div id="dashboard">
+            <nav class="tabs">
+                <button class="tab-link active" onclick="openTab(event, 'vue-globale')">Vue globale</button>
+                <button class="tab-link" onclick="openTab(event, 'par-reference')">Par référence</button>
+                <button class="tab-link" onclick="openTab(event, 'evolution-mensuelle')">Évolution mensuelle</button>
+                <button class="tab-link" onclick="openTab(event, 'transactions')">Transactions</button>
+            </nav>
+
+            <!-- VUE GLOBALE -->
+            <div id="vue-globale" class="tab-content active">
+                <div class="kpi-grid" id="global-kpis"></div>
+
+                <div class="chart-card full-width-chart">
                     <h4>Net par référence</h4>
-                    <canvas id="ref-net-bars-chart" height="150"></canvas>
+                    <canvas id="global-net-ref-chart" height="80"></canvas>
+                </div>
+
+                <div class="chart-card full-width-chart">
+                    <h4>Entrées vs Sorties – Évolution mensuelle</h4>
+                    <canvas id="global-chart" height="80"></canvas>
+                </div>
+
+                <div class="grid-layout">
+                    <div class="chart-card">
+                        <h4>Solde net mensuel</h4>
+                        <canvas id="net-monthly-chart" height="150"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Nombre de transactions / mois</h4>
+                        <canvas id="trans-monthly-chart" height="150"></canvas>
+                    </div>
                 </div>
             </div>
-            <div class="chart-card">
-                <div id="ref-selector-group" class="filter-group" style="box-shadow:none; padding:0; margin-bottom: 2rem;">
-                    <div class="filter-title">Sélectionner une référence</div>
-                    <div class="filter-buttons" id="ref-filter-btns"></div>
+
+            <!-- PAR RÉFÉRENCE -->
+            <div id="par-reference" class="tab-content">
+                <div class="ref-grid" id="ref-container"></div>
+                <div class="grid-layout">
+                    <div class="chart-card">
+                        <h4>Entrées et sorties par référence</h4>
+                        <canvas id="ref-bars-chart" height="150"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Net par référence</h4>
+                        <canvas id="ref-net-bars-chart" height="150"></canvas>
+                    </div>
                 </div>
-                <canvas id="ref-line-chart" height="120"></canvas>
-            </div>
-        </div>
-
-        <!-- ÉVOLUTION MENSUELLE -->
-        <div id="evolution-mensuelle" class="tab-content">
-            <div class="filter-group">
-                <div class="filter-title">Filtre mois</div>
-                <div class="filter-buttons" id="month-filters"></div>
-            </div>
-
-            <div class="grid-layout">
                 <div class="chart-card">
-                    <h4>Entrées et sorties pour le mois sélectionné</h4>
-                    <canvas id="monthly-detail-chart" height="180"></canvas>
+                    <div id="ref-selector-group" class="filter-group" style="box-shadow:none; padding:0; margin-bottom: 2rem;">
+                        <div class="filter-title">Sélectionner une référence</div>
+                        <div class="filter-buttons" id="ref-filter-btns"></div>
+                    </div>
+                    <canvas id="ref-line-chart" height="120"></canvas>
                 </div>
+            </div>
+
+            <!-- ÉVOLUTION MENSUELLE -->
+            <div id="evolution-mensuelle" class="tab-content">
+                <div class="filter-group">
+                    <div class="filter-title">Filtre mois</div>
+                    <div class="filter-buttons" id="month-filters"></div>
+                </div>
+
+                <div class="grid-layout">
+                    <div class="chart-card">
+                        <h4>Entrées et sorties pour le mois sélectionné</h4>
+                        <canvas id="monthly-detail-chart" height="180"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Synthèse du mois</h4>
+                        <div id="month-name-display" style="font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; letter-spacing: -0.05em;"></div>
+                        <div class="summary-sidebar" id="month-summary-sidebar"></div>
+                    </div>
+                </div>
+
                 <div class="chart-card">
-                    <h4>Synthèse du mois</h4>
-                    <div id="month-name-display" style="font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; letter-spacing: -0.05em;"></div>
-                    <div class="summary-sidebar" id="month-summary-sidebar"></div>
+                    <h4>Heatmap – Intensité mensuelle par référence</h4>
+                    <div class="heatmap-container" id="heatmap-container"></div>
                 </div>
             </div>
 
-            <div class="chart-card">
-                <h4>Heatmap – Intensité mensuelle par référence</h4>
-                <div class="heatmap-container" id="heatmap-container"></div>
-            </div>
-        </div>
-
-        <!-- TRANSACTIONS -->
-        <div id="transactions" class="tab-content">
-            <div class="table-card">
-                <div class="table-controls">
-                    <input type="text" id="table-search" placeholder="Rechercher une référence..." style="padding:0.8rem 1.2rem; border:1px solid var(--border-color); border-radius:1rem; width: 350px; outline: none; font-weight: 500;">
-                    <select id="ref-filter-select" style="padding:0.8rem 1.2rem; border:1px solid var(--border-color); border-radius:1rem; outline: none; font-weight: 500; cursor: pointer;">
-                        <option value="">Toutes les références</option>
-                    </select>
+            <!-- TRANSACTIONS -->
+            <div id="transactions" class="tab-content">
+                <div class="table-card">
+                    <div class="table-controls">
+                        <input type="text" id="table-search" placeholder="Rechercher une référence..." style="padding:0.8rem 1.2rem; border:1px solid var(--border-color); border-radius:1rem; width: 350px; outline: none; font-weight: 500;">
+                        <select id="ref-filter-select" style="padding:0.8rem 1.2rem; border:1px solid var(--border-color); border-radius:1rem; outline: none; font-weight: 500; cursor: pointer;">
+                            <option value="">Toutes les références</option>
+                        </select>
+                    </div>
+                    <div id="table-container"></div>
+                    <div class="pagination" id="pagination-controls"></div>
                 </div>
-                <div id="table-container"></div>
-                <div class="pagination" id="pagination-controls"></div>
             </div>
         </div>
     </div>
@@ -429,6 +464,17 @@
             return formatted;
         }
 
+        /**
+         * Calcule le badge de tendance
+         */
+        function getTrendBadge(current, previous) {
+            if (previous === undefined || previous === 0) return "";
+            const diff = ((current - previous) / previous) * 100;
+            const cls = diff >= 0 ? "trend-up" : "trend-down";
+            const sign = diff >= 0 ? "+" : "";
+            return `<span class="trend ${cls}">${sign}${diff.toFixed(1)}%</span>`;
+        }
+
         let stockData = [];
         let globalStats = {};
         let refStats = {};
@@ -437,6 +483,19 @@
         let tableFilters = { search: '', ref: '' };
         let collapsedMonths = new Set();
         const ROWS_PER_PAGE = 20;
+
+        // Check for LocalStorage data on load
+        window.addEventListener('load', () => {
+            const savedData = localStorage.getItem('stockData');
+            if (savedData) {
+                stockData = JSON.parse(savedData, (key, value) => {
+                    if (key === 'date') return new Date(value);
+                    return value;
+                });
+                processDataFromStock();
+                initDashboard();
+            }
+        });
 
         document.getElementById('file-upload').addEventListener('change', handleFileUpload);
         document.getElementById('table-search').addEventListener('input', (e) => {
@@ -457,28 +516,30 @@
                 const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
                 const firstSheet = workbook.SheetNames[0];
                 const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
-                processData(rawData);
+
+                stockData = rawData.map(row => ({
+                    date: row.Date instanceof Date ? row.Date : new Date(row.Date),
+                    ref: String(row.Ref || ''),
+                    entree: parseFloat(row.Entrée) || 0,
+                    sortie: parseFloat(row.Sortie) || 0,
+                    note: String(row.Note || '')
+                })).sort((a, b) => a.date - b.date);
+
+                localStorage.setItem('stockData', JSON.stringify(stockData));
+                processDataFromStock();
                 initDashboard();
             };
             reader.readAsBinaryString(file);
         }
 
-        function processData(data) {
-            stockData = data.map(row => ({
-                date: row.Date instanceof Date ? row.Date : new Date(row.Date),
-                ref: String(row.Ref || ''),
-                entree: parseFloat(row.Entrée) || 0,
-                sortie: parseFloat(row.Sortie) || 0,
-                note: String(row.Note || '')
-            })).sort((a, b) => a.date - b.date);
-
+        function processDataFromStock() {
             globalStats = { totalEntree: 0, totalSortie: 0, net: 0, refs: new Set(), corrections: 0, withNote: 0, transactions: stockData.length };
             refStats = {};
             monthlyStats = {};
 
             stockData.forEach(item => {
                 const month = item.date.toLocaleString('en-US', { month: 'short' }) + " " + item.date.getFullYear().toString().substr(-2);
-                const monthFull = item.date.toLocaleString('en-US', { month: 'short' }) + " " + item.date.getFullYear().toString().substr(-2);
+                const monthFull = item.date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
                 const monthKey = item.date.toISOString().substring(0, 7);
 
                 globalStats.totalEntree += item.entree;
@@ -510,6 +571,7 @@
         function initDashboard() {
             document.getElementById('empty-state').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('header-actions').style.display = 'block';
 
             const refSelect = document.getElementById('ref-filter-select');
             refSelect.innerHTML = '<option value="">Toutes les références</option>';
@@ -522,6 +584,11 @@
             updateRefTab();
             updateMonthlyTab();
             updateTransactionsTab(1);
+        }
+
+        function resetDashboard() {
+            localStorage.removeItem('stockData');
+            location.reload();
         }
 
         function openTab(evt, tabName) {
@@ -539,6 +606,13 @@
         }
 
         function updateGlobalTab() {
+            const keys = Object.keys(monthlyStats).sort();
+            const latestMonthKey = keys[keys.length - 1];
+            const prevMonthKey = keys[keys.length - 2];
+
+            const latest = monthlyStats[latestMonthKey];
+            const prev = monthlyStats[prevMonthKey];
+
             const container = document.getElementById('global-kpis');
             container.innerHTML = `
                 <div class="kpi-card">
@@ -552,9 +626,12 @@
                     <div class="subtext">${globalStats.transactions} transactions</div>
                 </div>
                 <div class="kpi-card" style="border-top-color: var(--success-color)">
-                    <h3>Solde Net</h3>
-                    <div class="value" style="color:var(--success-color)">${formatVal(globalStats.net, {isBadge: true, raw: Math.abs(globalStats.net) < 10000})}</div>
-                    <div class="subtext">Quasi équilibré</div>
+                    <h3>Dernier mois (Net)</h3>
+                    <div class="value" style="color:var(--success-color)">
+                        ${latest ? formatVal(latest.entree - latest.sortie, {isBadge: true}) : 'N/A'}
+                        ${latest && prev ? getTrendBadge(latest.entree - latest.sortie, prev.entree - prev.sortie) : ''}
+                    </div>
+                    <div class="subtext">${latest ? latest.label : ''} vs ${prev ? prev.label : ''}</div>
                 </div>
                 <div class="kpi-card" style="border-top-color: var(--warning-color)">
                     <h3>Références</h3>
@@ -575,7 +652,6 @@
 
             const refLabels = Array.from(globalStats.refs).sort();
 
-            // Net par référence (Full width histogram)
             const ctxNetRef = document.getElementById('global-net-ref-chart').getContext('2d');
             if (charts.globalNetRef) charts.globalNetRef.destroy();
             charts.globalNetRef = new Chart(ctxNetRef, {
@@ -596,7 +672,6 @@
                 }
             });
 
-            const keys = Object.keys(monthlyStats).sort();
             const labels = keys.map(k => monthlyStats[k].label);
 
             const ctxGlobal = document.getElementById('global-chart').getContext('2d');
@@ -657,7 +732,6 @@
             const container = document.getElementById('ref-container');
             container.innerHTML = '';
 
-            // Filter out refs with net balance of 0
             const filteredRefs = Object.entries(refStats)
                 .filter(([ref, stats]) => stats.net !== 0)
                 .sort((a, b) => a[0].localeCompare(b[0]));
@@ -765,22 +839,36 @@
 
             if (!selectedMonthKey) return;
             const monthData = monthlyStats[selectedMonthKey];
+            const idx = keys.indexOf(selectedMonthKey);
+            const prevData = idx > 0 ? monthlyStats[keys[idx-1]] : null;
+
             document.getElementById('month-name-display').textContent = monthData.fullLabel;
 
             const sidebar = document.getElementById('month-summary-sidebar');
             const net = monthData.entree - monthData.sortie;
+            const prevNet = prevData ? prevData.entree - prevData.sortie : 0;
+
             sidebar.innerHTML = `
                 <div class="summary-item entrees">
                     <span class="label">Entrées</span>
-                    <div class="val" style="color:var(--primary-color)">${formatVal(monthData.entree)}</div>
+                    <div class="val" style="color:var(--primary-color)">
+                        ${formatVal(monthData.entree)}
+                        ${getTrendBadge(monthData.entree, prevData ? prevData.entree : 0)}
+                    </div>
                 </div>
                 <div class="summary-item sorties">
                     <span class="label">Sorties</span>
-                    <div class="val" style="color:var(--secondary-color)">${formatVal(monthData.sortie)}</div>
+                    <div class="val" style="color:var(--secondary-color)">
+                        ${formatVal(monthData.sortie)}
+                        ${getTrendBadge(monthData.sortie, prevData ? prevData.sortie : 0)}
+                    </div>
                 </div>
                 <div class="summary-item net">
                     <span class="label">Net</span>
-                    <div class="val" style="color:var(--success-color)">${formatVal(net, {isBadge: true})}</div>
+                    <div class="val" style="color:var(--success-color)">
+                        ${formatVal(net, {isBadge: true})}
+                        ${getTrendBadge(net, prevNet)}
+                    </div>
                 </div>
                 <div style="font-size:0.85rem; color:var(--text-muted); margin-top: 1rem; text-align: center; font-weight: 600;">${monthData.trans} transactions</div>
             `;
