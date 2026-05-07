@@ -9,13 +9,18 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary-color: #2563eb; /* Bleu Entrée */
-            --secondary-color: #dc2626; /* Rouge Sortie */
-            --bg-color: #f8fafc;
+            --primary-color: #3b82f6; /* Bleu Entrée */
+            --secondary-color: #ef4444; /* Rouge Sortie */
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --bg-color: #f3f4f6;
             --card-bg: #ffffff;
-            --text-color: #1e293b;
-            --border-color: #e2e8f0;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
         }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -23,12 +28,13 @@
             color: var(--text-color);
             margin: 0;
             padding: 0;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1600px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 1.5rem;
         }
 
         /* Empty State */
@@ -41,55 +47,65 @@
 
         .upload-box {
             background: var(--card-bg);
-            padding: 3rem;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 4rem;
+            border-radius: 2rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
             text-align: center;
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
         }
 
-        .upload-box h1 { margin-bottom: 1rem; font-size: 1.5rem; }
-        .upload-box p { color: #64748b; margin-bottom: 2rem; }
+        .upload-box h1 { margin-bottom: 1.5rem; font-size: 2.5rem; font-weight: 900; letter-spacing: -0.025em; }
+        .upload-box p { color: var(--text-muted); margin-bottom: 2.5rem; font-size: 1.1rem; }
 
         button {
             background-color: var(--primary-color);
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: 1rem 2rem;
             border: none;
-            border-radius: 0.5rem;
-            font-weight: 600;
+            border-radius: 1rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        button:hover { opacity: 0.9; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3); }
 
         /* Dashboard Layout */
-        #dashboard { display: none; padding-top: 1rem; }
+        #dashboard { display: none; }
 
         .tabs {
             display: flex;
-            gap: 1rem;
+            gap: 2.5rem;
             margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.25rem;
         }
 
         .tab-link {
             background: none;
-            color: #64748b;
-            padding: 0.5rem 1rem;
-            border-radius: 0;
-            font-weight: 500;
-            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0.75rem 0.25rem;
             border: none;
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            font-size: 0.9rem;
+            transition: color 0.2s;
         }
 
         .tab-link.active {
             color: var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
-            margin-bottom: -0.7rem;
+        }
+
+        .tab-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -0.35rem;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--primary-color);
         }
 
         .tab-content { display: none; }
@@ -98,141 +114,181 @@
         /* KPIs */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
             margin-bottom: 2rem;
         }
 
         .kpi-card {
             background: var(--card-bg);
             padding: 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-            border-left: 4px solid var(--primary-color);
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            border-top: 4px solid var(--primary-color);
         }
 
-        .kpi-card h3 { font-size: 0.875rem; color: #64748b; margin: 0 0 0.5rem 0; }
-        .kpi-card .value { font-size: 1.5rem; font-weight: 700; }
+        .kpi-card h3 {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin: 0 0 1rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+        }
+        .kpi-card .value { font-size: 2.25rem; font-weight: 900; margin-bottom: 0.5rem; line-height: 1; letter-spacing: -0.05em; }
+        .kpi-card .subtext { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
 
         /* Charts */
-        .chart-container {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
-        /* Reference Cards */
+        .chart-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+        }
+
+        .chart-card h4 {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 0 0 2rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+        }
+
+        /* Ref Cards */
         .ref-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
         }
 
         .ref-card {
             background: var(--card-bg);
             padding: 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            display: flex;
+            flex-direction: column;
         }
 
-        .ref-card h4 { margin: 0 0 1rem 0; color: var(--primary-color); }
-        .ref-card .ref-stats { display: flex; justify-content: space-between; margin-bottom: 1rem; }
-        .ref-card .stat-item { text-align: center; }
-        .ref-card .stat-label { font-size: 0.75rem; color: #64748b; display: block; }
-        .ref-card .stat-value { font-weight: 600; }
+        .ref-card .ref-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .ref-card .ref-name { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .ref-card .ref-value { font-size: 2rem; font-weight: 900; color: var(--text-color); margin-bottom: 0.25rem; letter-spacing: -0.05em; }
+        .ref-card .ref-info { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 1.25rem; font-weight: 500; }
+
+        .badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+        .badge-success { background: #ecfdf5; color: #059669; }
+        .badge-danger { background: #fef2f2; color: #dc2626; }
+        .badge-neutral { background: #f9fafb; color: #6b7280; }
+
+        /* Monthly Summary Sidebar */
+        .summary-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .summary-item {
+            padding: 1.5rem;
+            border-radius: 1.25rem;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+        }
+        .summary-item:hover { transform: scale(1.02); }
+        .summary-item.entrees { border-left: 6px solid var(--primary-color); }
+        .summary-item.sorties { border-left: 6px solid var(--secondary-color); }
+        .summary-item.net { border-left: 6px solid var(--success-color); }
+
+        .summary-item .label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem; display: block; font-weight: 700; letter-spacing: 0.1em; }
+        .summary-item .val { font-size: 2.25rem; font-weight: 900; letter-spacing: -0.05em; }
 
         /* Table */
+        .table-card {
+            background: var(--card-bg);
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+            overflow: hidden;
+        }
+
         .table-controls {
+            padding: 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        input[type="text"], select {
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.4rem;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--card-bg);
-            border-radius: 0.75rem;
-            overflow: hidden;
-            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-        }
-
-        th, td {
-            padding: 1rem;
-            text-align: left;
             border-bottom: 1px solid var(--border-color);
+            background: #fdfdfd;
         }
 
-        th { background: #f1f5f9; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f9fafb; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 700; padding: 1.25rem; text-align: left; letter-spacing: 0.05em; }
+        td { padding: 1.25rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
 
-        .month-row {
-            background: #f8fafc;
-            font-weight: 700;
-            cursor: pointer;
-        }
+        .month-row { background: #f9fafb; font-weight: 800; cursor: pointer; }
+        .month-row:hover { background: #f3f4f6; }
 
-        .month-row:hover { background: #f1f5f9; }
+        .entry-text { color: var(--primary-color); font-weight: 800; }
+        .exit-text { color: var(--secondary-color); font-weight: 800; }
 
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: var(--text-color);
-            padding: 0 0.5rem;
-            font-size: 1.2rem;
-            cursor: pointer;
-            width: 30px;
-        }
+        .pagination { padding: 2rem; display: flex; justify-content: center; gap: 0.75rem; }
+        .pagination button { background: white; color: var(--text-color); border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
+        .pagination button.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
-        }
-
-        .pagination button {
+        /* Filters */
+        .filter-group {
             background: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-            padding: 0.5rem 0.75rem;
-            cursor: pointer;
-            border-radius: 0.3rem;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
         }
-
-        .pagination button.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .entry-text { color: var(--primary-color); font-weight: 600; }
-        .exit-text { color: var(--secondary-color); font-weight: 600; }
-
-        /* Filter buttons */
+        .filter-title { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1.25rem; font-weight: 700; letter-spacing: 0.1em; }
+        .filter-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; }
         .filter-btn {
-            background: #e2e8f0;
-            color: #475569;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+            background: #f3f4f6;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
         }
+        .filter-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
-        .filter-btn.active {
-            background: var(--primary-color);
-            color: white;
-        }
+        /* Heatmap */
+        .heatmap-container { margin-top: 2rem; overflow-x: auto; }
+        .heatmap-table { width: 100%; border-collapse: separate; border-spacing: 4px; }
+        .heatmap-table th { padding: 0.75rem; font-size: 0.7rem; background: transparent; text-align: center; font-weight: 800; color: var(--text-muted); }
+        .heatmap-table td { padding: 1rem; text-align: center; border-radius: 8px; font-size: 0.75rem; font-weight: 800; border: none; }
+        .heatmap-row-header { text-align: left !important; font-weight: 800 !important; font-size: 0.85rem !important; color: var(--text-color); width: 140px; padding-left: 0.5rem !important; }
+
+        .cell-empty { background-color: #f9fafb; color: #e5e7eb; }
+        .cell-low { background-color: #eff6ff; color: #3b82f6; }
+        .cell-mid { background-color: #bfdbfe; color: #2563eb; }
+        .cell-high { background-color: #3b82f6; color: #ffffff; }
+        .cell-vhigh { background-color: #1d4ed8; color: #ffffff; }
+
     </style>
 </head>
 <body>
@@ -247,43 +303,130 @@
 
     <div id="dashboard" class="container">
         <nav class="tabs">
-            <button class="tab-link active" onclick="openTab(event, 'vue-globale')">Vue Globale</button>
-            <button class="tab-link" onclick="openTab(event, 'par-reference')">Par Référence</button>
+            <button class="tab-link active" onclick="openTab(event, 'vue-globale')">Vue globale</button>
+            <button class="tab-link" onclick="openTab(event, 'par-reference')">Par référence</button>
             <button class="tab-link" onclick="openTab(event, 'evolution-mensuelle')">Évolution mensuelle</button>
             <button class="tab-link" onclick="openTab(event, 'transactions')">Transactions</button>
         </nav>
 
+        <!-- VUE GLOBALE -->
         <div id="vue-globale" class="tab-content active">
             <div class="kpi-grid" id="global-kpis"></div>
-            <div class="chart-container">
-                <canvas id="global-chart"></canvas>
+            <div class="grid-layout">
+                <div class="chart-card">
+                    <h4>Entrées vs Sorties – Évolution mensuelle</h4>
+                    <canvas id="global-chart" height="150"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>Répartition des entrées par référence</h4>
+                    <div style="height: 280px; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <canvas id="distribution-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="grid-layout">
+                <div class="chart-card">
+                    <h4>Solde net mensuel</h4>
+                    <canvas id="net-monthly-chart" height="150"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>Nombre de transactions / mois</h4>
+                    <canvas id="trans-monthly-chart" height="150"></canvas>
+                </div>
             </div>
         </div>
 
+        <!-- PAR RÉFÉRENCE -->
         <div id="par-reference" class="tab-content">
             <div class="ref-grid" id="ref-container"></div>
+            <div class="grid-layout">
+                <div class="chart-card">
+                    <h4>Entrées et sorties par référence</h4>
+                    <canvas id="ref-bars-chart" height="150"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>Net par référence</h4>
+                    <canvas id="ref-net-bars-chart" height="150"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div id="ref-selector-group" class="filter-group" style="box-shadow:none; padding:0; margin-bottom: 2rem;">
+                    <div class="filter-title">Sélectionner une référence</div>
+                    <div class="filter-buttons" id="ref-filter-btns"></div>
+                </div>
+                <canvas id="ref-line-chart" height="120"></canvas>
+            </div>
         </div>
 
+        <!-- ÉVOLUTION MENSUELLE -->
         <div id="evolution-mensuelle" class="tab-content">
-            <div id="month-filters" style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
-            <div class="chart-container">
-                <canvas id="monthly-detail-chart"></canvas>
+            <div class="filter-group">
+                <div class="filter-title">Filtre mois</div>
+                <div class="filter-buttons" id="month-filters"></div>
+            </div>
+
+            <div class="grid-layout">
+                <div class="chart-card">
+                    <h4>Entrées et sorties pour le mois sélectionné</h4>
+                    <canvas id="monthly-detail-chart" height="180"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h4>Synthèse du mois</h4>
+                    <div id="month-name-display" style="font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; letter-spacing: -0.05em;"></div>
+                    <div class="summary-sidebar" id="month-summary-sidebar"></div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h4>Heatmap – Intensité mensuelle par référence</h4>
+                <div class="heatmap-container" id="heatmap-container"></div>
             </div>
         </div>
 
+        <!-- TRANSACTIONS -->
         <div id="transactions" class="tab-content">
-            <div class="table-controls">
-                <input type="text" id="table-search" placeholder="Rechercher une référence...">
-                <select id="ref-filter" onchange="updateTransactionsTab(1)">
-                    <option value="">Toutes les références</option>
-                </select>
+            <div class="table-card">
+                <div class="table-controls">
+                    <input type="text" id="table-search" placeholder="Rechercher une référence..." style="padding:0.8rem 1.2rem; border:1px solid var(--border-color); border-radius:1rem; width: 350px; outline: none; font-weight: 500;">
+                    <select id="ref-filter-select" style="padding:0.8rem 1.2rem; border:1px solid var(--border-color); border-radius:1rem; outline: none; font-weight: 500; cursor: pointer;">
+                        <option value="">Toutes les références</option>
+                    </select>
+                </div>
+                <div id="table-container"></div>
+                <div class="pagination" id="pagination-controls"></div>
             </div>
-            <div id="table-container"></div>
-            <div class="pagination" id="pagination-controls"></div>
         </div>
     </div>
 
     <script>
+        /**
+         * Formatte les valeurs numériques avec arrondi et suffixe 'k'
+         * Utilise le style des captures d'écran
+         */
+        function formatVal(val, options = {}) {
+            const { isBadge = false, precision = 1, forceK = false, raw = false } = options;
+            if (raw) return val.toLocaleString('en-US');
+
+            const abs = Math.abs(val);
+            let formatted = "";
+
+            // On utilise 'k' si >= 1000, sauf si précisé autrement
+            if (abs >= 1000 || forceK) {
+                const kVal = val / 1000;
+                formatted = kVal.toLocaleString('en-US', {
+                    minimumFractionDigits: precision,
+                    maximumFractionDigits: precision
+                }) + "k";
+            } else {
+                formatted = Math.round(val).toLocaleString('en-US');
+            }
+
+            if (isBadge && val !== 0) {
+                return (val > 0 ? "+" : "") + formatted;
+            }
+            return formatted;
+        }
+
         let stockData = [];
         let globalStats = {};
         let refStats = {};
@@ -298,7 +441,7 @@
             tableFilters.search = e.target.value.toLowerCase();
             updateTransactionsTab(1);
         });
-        document.getElementById('ref-filter').addEventListener('change', (e) => {
+        document.getElementById('ref-filter-select').addEventListener('change', (e) => {
             tableFilters.ref = e.target.value;
             updateTransactionsTab(1);
         });
@@ -324,26 +467,37 @@
                 ref: String(row.Ref || ''),
                 entree: parseFloat(row.Entrée) || 0,
                 sortie: parseFloat(row.Sortie) || 0,
-                note: row.Note || ''
-            })).sort((a, b) => b.date - a.date);
+                note: String(row.Note || '')
+            })).sort((a, b) => a.date - b.date);
 
-            globalStats = { totalEntree: 0, totalSortie: 0, net: 0, refs: new Set() };
+            globalStats = { totalEntree: 0, totalSortie: 0, net: 0, refs: new Set(), corrections: 0, withNote: 0, transactions: stockData.length };
             refStats = {};
             monthlyStats = {};
 
             stockData.forEach(item => {
-                const month = item.date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+                const month = item.date.toLocaleString('en-US', { month: 'short' }) + " " + item.date.getFullYear().toString().substr(-2);
+                const monthFull = item.date.toLocaleString('en-US', { month: 'short' }) + " " + item.date.getFullYear().toString().substr(-2);
                 const monthKey = item.date.toISOString().substring(0, 7);
+
                 globalStats.totalEntree += item.entree;
                 globalStats.totalSortie += item.sortie;
                 globalStats.refs.add(item.ref);
-                if (!refStats[item.ref]) refStats[item.ref] = { entree: 0, sortie: 0, net: 0 };
+                if (item.entree === 0 && item.sortie === 0 && item.note) globalStats.corrections++;
+                if (item.note) globalStats.withNote++;
+
+                if (!refStats[item.ref]) refStats[item.ref] = { entree: 0, sortie: 0, net: 0, count: 0, monthly: {} };
                 refStats[item.ref].entree += item.entree;
                 refStats[item.ref].sortie += item.sortie;
                 refStats[item.ref].net = refStats[item.ref].entree - refStats[item.ref].sortie;
-                if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { label: month, entree: 0, sortie: 0, refs: {} };
+                refStats[item.ref].count++;
+                if (!refStats[item.ref].monthly[monthKey]) refStats[item.ref].monthly[monthKey] = { entree: 0, sortie: 0 };
+                refStats[item.ref].monthly[monthKey].entree += item.entree;
+                refStats[item.ref].monthly[monthKey].sortie += item.sortie;
+
+                if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { label: month, fullLabel: monthFull, entree: 0, sortie: 0, trans: 0, refs: {} };
                 monthlyStats[monthKey].entree += item.entree;
                 monthlyStats[monthKey].sortie += item.sortie;
+                monthlyStats[monthKey].trans++;
                 if (!monthlyStats[monthKey].refs[item.ref]) monthlyStats[monthKey].refs[item.ref] = { entree: 0, sortie: 0 };
                 monthlyStats[monthKey].refs[item.ref].entree += item.entree;
                 monthlyStats[monthKey].refs[item.ref].sortie += item.sortie;
@@ -354,12 +508,14 @@
         function initDashboard() {
             document.getElementById('empty-state').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            const refSelect = document.getElementById('ref-filter');
+
+            const refSelect = document.getElementById('ref-filter-select');
             refSelect.innerHTML = '<option value="">Toutes les références</option>';
             Array.from(globalStats.refs).sort().forEach(ref => {
                 const opt = document.createElement('option');
                 opt.value = ref; opt.textContent = ref; refSelect.appendChild(opt);
             });
+
             updateGlobalTab();
             updateRefTab();
             updateMonthlyTab();
@@ -368,70 +524,222 @@
 
         function openTab(evt, tabName) {
             const contents = document.getElementsByClassName("tab-content");
-            for (let content of contents) content.style.display = "none";
+            for (let content of contents) {
+                content.style.display = "none";
+                content.classList.remove("active");
+            }
             const links = document.getElementsByClassName("tab-link");
             for (let link of links) link.classList.remove("active");
+
             document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
             evt.currentTarget.classList.add("active");
         }
 
         function updateGlobalTab() {
             const container = document.getElementById('global-kpis');
             container.innerHTML = `
-                <div class="kpi-card"><h3>Total Entrées</h3><div class="value entry-text">${globalStats.totalEntree}</div></div>
-                <div class="kpi-card" style="border-left-color: var(--secondary-color)"><h3>Total Sorties</h3><div class="value exit-text">${globalStats.totalSortie}</div></div>
-                <div class="kpi-card" style="border-left-color: #10b981"><h3>Solde Net</h3><div class="value">${globalStats.net}</div></div>
-                <div class="kpi-card" style="border-left-color: #8b5cf6"><h3>Références</h3><div class="value">${globalStats.refs.size}</div></div>
+                <div class="kpi-card">
+                    <h3>Total Entrées</h3>
+                    <div class="value" style="color:var(--primary-color)">${formatVal(globalStats.totalEntree, {precision: 0})}</div>
+                    <div class="subtext">${globalStats.transactions} transactions</div>
+                </div>
+                <div class="kpi-card" style="border-top-color: var(--secondary-color)">
+                    <h3>Total Sorties</h3>
+                    <div class="value" style="color:var(--secondary-color)">${formatVal(globalStats.totalSortie, {precision: 0})}</div>
+                    <div class="subtext">${globalStats.transactions} transactions</div>
+                </div>
+                <div class="kpi-card" style="border-top-color: var(--success-color)">
+                    <h3>Solde Net</h3>
+                    <div class="value" style="color:var(--success-color)">${formatVal(globalStats.net, {isBadge: true, raw: Math.abs(globalStats.net) < 10000})}</div>
+                    <div class="subtext">Quasi équilibré</div>
+                </div>
+                <div class="kpi-card" style="border-top-color: var(--warning-color)">
+                    <h3>Références</h3>
+                    <div class="value">${globalStats.refs.size}</div>
+                    <div class="subtext">${Array.from(globalStats.refs).slice(0,2).join(', ')}...</div>
+                </div>
+                <div class="kpi-card" style="border-top-color: #8b5cf6">
+                    <h3>Corrections</h3>
+                    <div class="value">${globalStats.corrections}</div>
+                    <div class="subtext">Ajustements manuels</div>
+                </div>
+                <div class="kpi-card" style="border-top-color: #06b6d4">
+                    <h3>Lignes avec note</h3>
+                    <div class="value">${globalStats.withNote}</div>
+                    <div class="subtext">sur ${globalStats.transactions} lignes</div>
+                </div>
             `;
-            const ctx = document.getElementById('global-chart').getContext('2d');
-            if (charts.global) charts.global.destroy();
+
             const keys = Object.keys(monthlyStats).sort();
-            charts.global = new Chart(ctx, {
+            const labels = keys.map(k => monthlyStats[k].label);
+
+            const ctxGlobal = document.getElementById('global-chart').getContext('2d');
+            if (charts.global) charts.global.destroy();
+            charts.global = new Chart(ctxGlobal, {
                 type: 'bar',
                 data: {
-                    labels: keys.map(k => monthlyStats[k].label),
+                    labels: labels,
                     datasets: [
-                        { label: 'Entrées', data: keys.map(k => monthlyStats[k].entree), backgroundColor: '#2563eb' },
-                        { label: 'Sorties', data: keys.map(k => monthlyStats[k].sortie), backgroundColor: '#dc2626' }
+                        { label: 'Entrées', data: keys.map(k => monthlyStats[k].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Sorties', data: keys.map(k => monthlyStats[k].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
                     ]
                 },
-                options: { responsive: true, plugins: { title: { display: true, text: 'Évolution Mensuelle Globale' } } }
+                options: { responsive: true, plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, font: { weight: 'bold' } } } }, scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => formatVal(v) } } } }
+            });
+
+            const ctxDist = document.getElementById('distribution-chart').getContext('2d');
+            if (charts.dist) charts.dist.destroy();
+            const refLabels = Array.from(globalStats.refs).sort();
+            charts.dist = new Chart(ctxDist, {
+                type: 'doughnut',
+                data: {
+                    labels: refLabels,
+                    datasets: [{
+                        data: refLabels.map(r => refStats[r].entree),
+                        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }]
+                },
+                options: { responsive: true, cutout: '80%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { weight: '600' } } } } }
+            });
+
+            const ctxNet = document.getElementById('net-monthly-chart').getContext('2d');
+            if (charts.net) charts.net.destroy();
+            charts.net = new Chart(ctxNet, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Solde Net',
+                        data: keys.map(k => monthlyStats[k].entree - monthlyStats[k].sortie),
+                        backgroundColor: keys.map(k => (monthlyStats[k].entree - monthlyStats[k].sortie) >= 0 ? '#10b981' : '#ef4444'),
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
+            });
+
+            const ctxTrans = document.getElementById('trans-monthly-chart').getContext('2d');
+            if (charts.trans) charts.trans.destroy();
+            charts.trans = new Chart(ctxTrans, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Transactions',
+                        data: keys.map(k => monthlyStats[k].trans),
+                        borderColor: '#06b6d4',
+                        backgroundColor: '#06b6d411',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: '#06b6d4',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
             });
         }
 
         function updateRefTab() {
             const container = document.getElementById('ref-container');
             container.innerHTML = '';
-            Object.entries(refStats).sort().forEach(([ref, stats]) => {
+            const sortedRefs = Object.entries(refStats).sort();
+
+            sortedRefs.forEach(([ref, stats]) => {
+                const isPos = stats.net >= 0;
                 const card = document.createElement('div');
                 card.className = 'ref-card';
                 card.innerHTML = `
-                    <h4>${ref}</h4>
-                    <div class="ref-stats">
-                        <div class="stat-item"><span class="stat-label">Net</span><span class="stat-value">${stats.net}</span></div>
-                        <div class="stat-item"><span class="stat-label">Entrées</span><span class="stat-value entry-text">${stats.entree}</span></div>
-                        <div class="stat-item"><span class="stat-label">Sorties</span><span class="stat-value exit-text">${stats.sortie}</span></div>
+                    <div class="ref-header">
+                        <div class="ref-name">${ref}</div>
+                        <div class="badge ${isPos ? 'badge-success' : 'badge-danger'}">${formatVal(stats.net, {isBadge: true})} net</div>
                     </div>
-                    <canvas id="chart-${ref.replace(/\s+/g, '-')}" height="100"></canvas>
+                    <div class="ref-value">${formatVal(stats.entree)}</div>
+                    <div class="ref-info">Entrées • ${stats.count} lignes</div>
                 `;
                 container.appendChild(card);
-                setTimeout(() => {
-                    const ctx = document.getElementById(`chart-${ref.replace(/\s+/g, '-')}`).getContext('2d');
-                    new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: ['Entrées', 'Sorties'],
-                            datasets: [{ data: [stats.entree, stats.sortie], backgroundColor: ['#2563eb', '#dc2626'] }]
-                        },
-                        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-                    });
-                }, 0);
+            });
+
+            const refLabels = sortedRefs.map(r => r[0]);
+
+            const ctxBars = document.getElementById('ref-bars-chart').getContext('2d');
+            if (charts.refBars) charts.refBars.destroy();
+            charts.refBars = new Chart(ctxBars, {
+                type: 'bar',
+                data: {
+                    labels: refLabels,
+                    datasets: [
+                        { label: 'Entrées', data: sortedRefs.map(r => r[1].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Sorties', data: sortedRefs.map(r => r[1].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
+                    ]
+                },
+                options: { responsive: true, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
+            });
+
+            const ctxNetBars = document.getElementById('ref-net-bars-chart').getContext('2d');
+            if (charts.refNetBars) charts.refNetBars.destroy();
+            charts.refNetBars = new Chart(ctxNetBars, {
+                type: 'bar',
+                data: {
+                    labels: refLabels,
+                    datasets: [{
+                        label: 'Net',
+                        data: sortedRefs.map(r => r[1].net),
+                        backgroundColor: sortedRefs.map(r => r[1].net >= 0 ? '#10b981' : '#ef4444'),
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
+            });
+
+            const selector = document.getElementById('ref-filter-btns');
+            selector.innerHTML = '';
+            refLabels.forEach((ref, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn' + (idx === 0 ? ' active' : '');
+                btn.textContent = ref;
+                btn.onclick = () => {
+                    document.querySelectorAll('#ref-filter-btns .filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    updateRefLineChart(ref);
+                };
+                selector.appendChild(btn);
+            });
+
+            if (refLabels.length > 0) updateRefLineChart(refLabels[0]);
+        }
+
+        function updateRefLineChart(refName) {
+            const stats = refStats[refName];
+            const keys = Object.keys(monthlyStats).sort();
+            const labels = keys.map(k => monthlyStats[k].label);
+            const dataE = keys.map(k => stats.monthly[k] ? stats.monthly[k].entree : 0);
+            const dataS = keys.map(k => stats.monthly[k] ? stats.monthly[k].sortie : 0);
+
+            const ctxLine = document.getElementById('ref-line-chart').getContext('2d');
+            if (charts.refLine) charts.refLine.destroy();
+            charts.refLine = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Entrées', data: dataE, borderColor: '#3b82f6', backgroundColor: '#3b82f622', fill: false, tension: 0.4, pointRadius: 5 },
+                        { label: 'Sorties', data: dataS, borderColor: '#ef4444', backgroundColor: '#ef444422', fill: false, tension: 0.4, borderDash: [6, 6], pointRadius: 5 }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, font: { weight: '700' } } } }, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
             });
         }
 
         function updateMonthlyTab(selectedMonthKey = null) {
             const keys = Object.keys(monthlyStats).sort();
             if (!selectedMonthKey && keys.length > 0) selectedMonthKey = keys[keys.length - 1];
+
             const filterContainer = document.getElementById('month-filters');
             filterContainer.innerHTML = '';
             keys.forEach(key => {
@@ -441,9 +749,30 @@
                 btn.onclick = () => updateMonthlyTab(key);
                 filterContainer.appendChild(btn);
             });
+
             if (!selectedMonthKey) return;
-            const data = monthlyStats[selectedMonthKey].refs;
-            const refs = Object.keys(data).sort();
+            const monthData = monthlyStats[selectedMonthKey];
+            document.getElementById('month-name-display').textContent = monthData.fullLabel;
+
+            const sidebar = document.getElementById('month-summary-sidebar');
+            const net = monthData.entree - monthData.sortie;
+            sidebar.innerHTML = `
+                <div class="summary-item entrees">
+                    <span class="label">Entrées</span>
+                    <div class="val" style="color:var(--primary-color)">${formatVal(monthData.entree)}</div>
+                </div>
+                <div class="summary-item sorties">
+                    <span class="label">Sorties</span>
+                    <div class="val" style="color:var(--secondary-color)">${formatVal(monthData.sortie)}</div>
+                </div>
+                <div class="summary-item net">
+                    <span class="label">Net</span>
+                    <div class="val" style="color:var(--success-color)">${formatVal(net, {isBadge: true})}</div>
+                </div>
+                <div style="font-size:0.85rem; color:var(--text-muted); margin-top: 1rem; text-align: center; font-weight: 600;">${monthData.trans} transactions</div>
+            `;
+
+            const refs = Object.keys(monthData.refs).sort();
             const ctx = document.getElementById('monthly-detail-chart').getContext('2d');
             if (charts.monthly) charts.monthly.destroy();
             charts.monthly = new Chart(ctx, {
@@ -451,17 +780,46 @@
                 data: {
                     labels: refs,
                     datasets: [
-                        { label: 'Entrées', data: refs.map(r => data[r].entree), backgroundColor: '#2563eb' },
-                        { label: 'Sorties', data: refs.map(r => data[r].sortie), backgroundColor: '#dc2626' }
+                        { label: 'Entrées', data: refs.map(r => monthData.refs[r].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Sorties', data: refs.map(r => monthData.refs[r].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
                     ]
                 },
-                options: { responsive: true, plugins: { title: { display: true, text: `Détail pour ${monthlyStats[selectedMonthKey].label}` } } }
+                options: { responsive: true, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
             });
+
+            updateHeatmap();
+        }
+
+        function updateHeatmap() {
+            const container = document.getElementById('heatmap-container');
+            const keys = Object.keys(monthlyStats).sort();
+            const refLabels = Array.from(globalStats.refs).sort();
+
+            let html = '<table class="heatmap-table"><thead><tr><th>RÉF</th>';
+            keys.forEach(k => html += `<th>${monthlyStats[k].label}</th>`);
+            html += '</tr></thead><tbody>';
+
+            refLabels.forEach(ref => {
+                html += `<tr><td class="heatmap-row-header">${ref}</td>`;
+                keys.forEach(k => {
+                    const val = (refStats[ref].monthly[k] ? refStats[ref].monthly[k].entree : 0);
+                    let cls = "cell-empty";
+                    if (val > 50000) cls = "cell-vhigh";
+                    else if (val > 25000) cls = "cell-high";
+                    else if (val > 10000) cls = "cell-mid";
+                    else if (val > 0) cls = "cell-low";
+                    html += `<td class="${cls}">${val > 0 ? formatVal(val) : ""}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
         }
 
         function updateTransactionsTab(page = 1) {
             const container = document.getElementById('table-container');
-            const filteredData = stockData.filter(item => {
+            const filteredData = [...stockData].reverse().filter(item => {
                 const matchesSearch = item.ref.toLowerCase().includes(tableFilters.search);
                 const matchesRef = !tableFilters.ref || item.ref === tableFilters.ref;
                 return matchesSearch && matchesRef;
@@ -471,55 +829,28 @@
             const start = (page - 1) * ROWS_PER_PAGE;
             const paginatedData = filteredData.slice(start, start + ROWS_PER_PAGE);
 
-            // Grouping paginated data by month
             const groups = {};
             paginatedData.forEach(item => {
                 const monthKey = item.date.toISOString().substring(0, 7);
-                const monthLabel = item.date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+                const monthLabel = item.date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
                 if (!groups[monthKey]) groups[monthKey] = { label: monthLabel, items: [] };
                 groups[monthKey].items.push(item);
             });
 
-            let html = `<table>
-                <thead>
-                    <tr>
-                        <th style="width: 40px"></th>
-                        <th>Date</th>
-                        <th>Référence</th>
-                        <th>Entrée</th>
-                        <th>Sortie</th>
-                        <th>Note</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+            let html = `<table><thead><tr><th style="width: 50px"></th><th>Date</th><th>Référence</th><th>Entrée</th><th>Sortie</th><th>Note</th></tr></thead><tbody>`;
 
             Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0])).forEach(([key, group]) => {
                 const isCollapsed = collapsedMonths.has(key);
-                html += `
-                    <tr class="month-row" onclick="toggleMonth('${key}')">
-                        <td><button class="toggle-btn">${isCollapsed ? '+' : '-'}</button></td>
-                        <td colspan="5">${group.label} (${group.items.length} transactions)</td>
-                    </tr>
-                `;
+                html += `<tr class="month-row" onclick="toggleMonth('${key}')"><td style="text-align:center">${isCollapsed ? '+' : '−'}</td><td colspan="5">${group.label} <span style="font-weight:400; color:var(--text-muted); margin-left:1.5rem; font-size: 0.8rem;">${group.items.length} transactions</span></td></tr>`;
                 if (!isCollapsed) {
                     group.items.forEach(item => {
-                        html += `
-                            <tr>
-                                <td></td>
-                                <td>${item.date.toLocaleDateString('fr-FR')}</td>
-                                <td>${item.ref}</td>
-                                <td class="entry-text">${item.entree || '-'}</td>
-                                <td class="exit-text">${item.sortie || '-'}</td>
-                                <td>${item.note}</td>
-                            </tr>
-                        `;
+                        html += `<tr><td></td><td style="color:var(--text-muted)">${item.date.toLocaleDateString('en-US')}</td><td style="font-weight:700">${item.ref}</td><td class="entry-text">${item.entree || '—'}</td><td class="exit-text">${item.sortie || '—'}</td><td style="font-size:0.8rem; color:var(--text-muted); font-style: italic;">${item.note}</td></tr>`;
                     });
                 }
             });
 
             html += '</tbody></table>';
             container.innerHTML = html;
-
             updatePagination(page, totalPages);
         }
 
@@ -532,7 +863,14 @@
         function updatePagination(current, total) {
             const container = document.getElementById('pagination-controls');
             container.innerHTML = '';
-            for (let i = 1; i <= total; i++) {
+            if (total <= 1) return;
+
+            const maxVisible = 5;
+            let start = Math.max(1, current - 2);
+            let end = Math.min(total, start + maxVisible - 1);
+            if (end === total) start = Math.max(1, end - maxVisible + 1);
+
+            for (let i = start; i <= end; i++) {
                 const btn = document.createElement('button');
                 btn.textContent = i;
                 if (i === current) btn.classList.add('active');
