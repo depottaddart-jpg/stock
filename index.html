@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Flux de Stock</title>
+    <!-- CDNs -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb; /* Bleu Entrée */
+            --secondary-color: #dc2626; /* Rouge Sortie */
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Empty State */
+        #empty-state {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-box {
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .upload-box h1 { margin-bottom: 1rem; font-size: 1.5rem; }
+        .upload-box p { color: #64748b; margin-bottom: 2rem; }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        /* Dashboard Layout */
+        #dashboard { display: none; padding-top: 1rem; }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-link {
+            background: none;
+            color: #64748b;
+            padding: 0.5rem 1rem;
+            border-radius: 0;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+
+        .tab-link.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            margin-bottom: -0.7rem;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* KPIs */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .kpi-card h3 { font-size: 0.875rem; color: #64748b; margin: 0 0 0.5rem 0; }
+        .kpi-card .value { font-size: 1.5rem; font-weight: 700; }
+
+        /* Charts */
+        .chart-container {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            margin-bottom: 2rem;
+        }
+
+        /* Reference Cards */
+        .ref-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .ref-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+
+        .ref-card h4 { margin: 0 0 1rem 0; color: var(--primary-color); }
+        .ref-card .ref-stats { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+        .ref-card .stat-item { text-align: center; }
+        .ref-card .stat-label { font-size: 0.75rem; color: #64748b; display: block; }
+        .ref-card .stat-value { font-weight: 600; }
+
+        /* Table */
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"], select {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.4rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th { background: #f1f5f9; font-weight: 600; }
+
+        .month-row {
+            background: #f8fafc;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .month-row:hover { background: #f1f5f9; }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            padding: 0 0.5rem;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 30px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .pagination button {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-radius: 0.3rem;
+        }
+
+        .pagination button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .entry-text { color: var(--primary-color); font-weight: 600; }
+        .exit-text { color: var(--secondary-color); font-weight: 600; }
+
+        /* Filter buttons */
+        .filter-btn {
+            background: #e2e8f0;
+            color: #475569;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="empty-state" class="container">
+        <div class="upload-box">
+            <h1>Analyse de Flux de Stock</h1>
+            <p>Veuillez charger un fichier Excel (.xlsx ou .csv) pour commencer l'analyse.</p>
+            <input type="file" id="file-upload" accept=".xlsx, .csv" hidden>
+            <button onclick="document.getElementById('file-upload').click()">Uploader un fichier depuis le PC</button>
+        </div>
+    </div>
+
+    <div id="dashboard" class="container">
+        <nav class="tabs">
+            <button class="tab-link active" onclick="openTab(event, 'vue-globale')">Vue Globale</button>
+            <button class="tab-link" onclick="openTab(event, 'par-reference')">Par Référence</button>
+            <button class="tab-link" onclick="openTab(event, 'evolution-mensuelle')">Évolution mensuelle</button>
+            <button class="tab-link" onclick="openTab(event, 'transactions')">Transactions</button>
+        </nav>
+
+        <div id="vue-globale" class="tab-content active">
+            <div class="kpi-grid" id="global-kpis"></div>
+            <div class="chart-container">
+                <canvas id="global-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="par-reference" class="tab-content">
+            <div class="ref-grid" id="ref-container"></div>
+        </div>
+
+        <div id="evolution-mensuelle" class="tab-content">
+            <div id="month-filters" style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+            <div class="chart-container">
+                <canvas id="monthly-detail-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="transactions" class="tab-content">
+            <div class="table-controls">
+                <input type="text" id="table-search" placeholder="Rechercher une référence...">
+                <select id="ref-filter" onchange="updateTransactionsTab(1)">
+                    <option value="">Toutes les références</option>
+                </select>
+            </div>
+            <div id="table-container"></div>
+            <div class="pagination" id="pagination-controls"></div>
+        </div>
+    </div>
+
+    <script>
+        let stockData = [];
+        let globalStats = {};
+        let refStats = {};
+        let monthlyStats = {};
+        let charts = {};
+        let tableFilters = { search: '', ref: '' };
+        let collapsedMonths = new Set();
+        const ROWS_PER_PAGE = 20;
+
+        document.getElementById('file-upload').addEventListener('change', handleFileUpload);
+        document.getElementById('table-search').addEventListener('input', (e) => {
+            tableFilters.search = e.target.value.toLowerCase();
+            updateTransactionsTab(1);
+        });
+        document.getElementById('ref-filter').addEventListener('change', (e) => {
+            tableFilters.ref = e.target.value;
+            updateTransactionsTab(1);
+        });
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = evt.target.result;
+                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+                const firstSheet = workbook.SheetNames[0];
+                const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet]);
+                processData(rawData);
+                initDashboard();
+            };
+            reader.readAsBinaryString(file);
+        }
+
+        function processData(data) {
+            stockData = data.map(row => ({
+                date: row.Date instanceof Date ? row.Date : new Date(row.Date),
+                ref: String(row.Ref || ''),
+                entree: parseFloat(row.Entrée) || 0,
+                sortie: parseFloat(row.Sortie) || 0,
+                note: row.Note || ''
+            })).sort((a, b) => b.date - a.date);
+
+            globalStats = { totalEntree: 0, totalSortie: 0, net: 0, refs: new Set() };
+            refStats = {};
+            monthlyStats = {};
+
+            stockData.forEach(item => {
+                const month = item.date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+                const monthKey = item.date.toISOString().substring(0, 7);
+                globalStats.totalEntree += item.entree;
+                globalStats.totalSortie += item.sortie;
+                globalStats.refs.add(item.ref);
+                if (!refStats[item.ref]) refStats[item.ref] = { entree: 0, sortie: 0, net: 0 };
+                refStats[item.ref].entree += item.entree;
+                refStats[item.ref].sortie += item.sortie;
+                refStats[item.ref].net = refStats[item.ref].entree - refStats[item.ref].sortie;
+                if (!monthlyStats[monthKey]) monthlyStats[monthKey] = { label: month, entree: 0, sortie: 0, refs: {} };
+                monthlyStats[monthKey].entree += item.entree;
+                monthlyStats[monthKey].sortie += item.sortie;
+                if (!monthlyStats[monthKey].refs[item.ref]) monthlyStats[monthKey].refs[item.ref] = { entree: 0, sortie: 0 };
+                monthlyStats[monthKey].refs[item.ref].entree += item.entree;
+                monthlyStats[monthKey].refs[item.ref].sortie += item.sortie;
+            });
+            globalStats.net = globalStats.totalEntree - globalStats.totalSortie;
+        }
+
+        function initDashboard() {
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            const refSelect = document.getElementById('ref-filter');
+            refSelect.innerHTML = '<option value="">Toutes les références</option>';
+            Array.from(globalStats.refs).sort().forEach(ref => {
+                const opt = document.createElement('option');
+                opt.value = ref; opt.textContent = ref; refSelect.appendChild(opt);
+            });
+            updateGlobalTab();
+            updateRefTab();
+            updateMonthlyTab();
+            updateTransactionsTab(1);
+        }
+
+        function openTab(evt, tabName) {
+            const contents = document.getElementsByClassName("tab-content");
+            for (let content of contents) content.style.display = "none";
+            const links = document.getElementsByClassName("tab-link");
+            for (let link of links) link.classList.remove("active");
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.classList.add("active");
+        }
+
+        function updateGlobalTab() {
+            const container = document.getElementById('global-kpis');
+            container.innerHTML = `
+                <div class="kpi-card"><h3>Total Entrées</h3><div class="value entry-text">${globalStats.totalEntree}</div></div>
+                <div class="kpi-card" style="border-left-color: var(--secondary-color)"><h3>Total Sorties</h3><div class="value exit-text">${globalStats.totalSortie}</div></div>
+                <div class="kpi-card" style="border-left-color: #10b981"><h3>Solde Net</h3><div class="value">${globalStats.net}</div></div>
+                <div class="kpi-card" style="border-left-color: #8b5cf6"><h3>Références</h3><div class="value">${globalStats.refs.size}</div></div>
+            `;
+            const ctx = document.getElementById('global-chart').getContext('2d');
+            if (charts.global) charts.global.destroy();
+            const keys = Object.keys(monthlyStats).sort();
+            charts.global = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: keys.map(k => monthlyStats[k].label),
+                    datasets: [
+                        { label: 'Entrées', data: keys.map(k => monthlyStats[k].entree), backgroundColor: '#2563eb' },
+                        { label: 'Sorties', data: keys.map(k => monthlyStats[k].sortie), backgroundColor: '#dc2626' }
+                    ]
+                },
+                options: { responsive: true, plugins: { title: { display: true, text: 'Évolution Mensuelle Globale' } } }
+            });
+        }
+
+        function updateRefTab() {
+            const container = document.getElementById('ref-container');
+            container.innerHTML = '';
+            Object.entries(refStats).sort().forEach(([ref, stats]) => {
+                const card = document.createElement('div');
+                card.className = 'ref-card';
+                card.innerHTML = `
+                    <h4>${ref}</h4>
+                    <div class="ref-stats">
+                        <div class="stat-item"><span class="stat-label">Net</span><span class="stat-value">${stats.net}</span></div>
+                        <div class="stat-item"><span class="stat-label">Entrées</span><span class="stat-value entry-text">${stats.entree}</span></div>
+                        <div class="stat-item"><span class="stat-label">Sorties</span><span class="stat-value exit-text">${stats.sortie}</span></div>
+                    </div>
+                    <canvas id="chart-${ref.replace(/\s+/g, '-')}" height="100"></canvas>
+                `;
+                container.appendChild(card);
+                setTimeout(() => {
+                    const ctx = document.getElementById(`chart-${ref.replace(/\s+/g, '-')}`).getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Entrées', 'Sorties'],
+                            datasets: [{ data: [stats.entree, stats.sortie], backgroundColor: ['#2563eb', '#dc2626'] }]
+                        },
+                        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                    });
+                }, 0);
+            });
+        }
+
+        function updateMonthlyTab(selectedMonthKey = null) {
+            const keys = Object.keys(monthlyStats).sort();
+            if (!selectedMonthKey && keys.length > 0) selectedMonthKey = keys[keys.length - 1];
+            const filterContainer = document.getElementById('month-filters');
+            filterContainer.innerHTML = '';
+            keys.forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = `filter-btn ${key === selectedMonthKey ? 'active' : ''}`;
+                btn.textContent = monthlyStats[key].label;
+                btn.onclick = () => updateMonthlyTab(key);
+                filterContainer.appendChild(btn);
+            });
+            if (!selectedMonthKey) return;
+            const data = monthlyStats[selectedMonthKey].refs;
+            const refs = Object.keys(data).sort();
+            const ctx = document.getElementById('monthly-detail-chart').getContext('2d');
+            if (charts.monthly) charts.monthly.destroy();
+            charts.monthly = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: refs,
+                    datasets: [
+                        { label: 'Entrées', data: refs.map(r => data[r].entree), backgroundColor: '#2563eb' },
+                        { label: 'Sorties', data: refs.map(r => data[r].sortie), backgroundColor: '#dc2626' }
+                    ]
+                },
+                options: { responsive: true, plugins: { title: { display: true, text: `Détail pour ${monthlyStats[selectedMonthKey].label}` } } }
+            });
+        }
+
+        function updateTransactionsTab(page = 1) {
+            const container = document.getElementById('table-container');
+            const filteredData = stockData.filter(item => {
+                const matchesSearch = item.ref.toLowerCase().includes(tableFilters.search);
+                const matchesRef = !tableFilters.ref || item.ref === tableFilters.ref;
+                return matchesSearch && matchesRef;
+            });
+
+            const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
+            const start = (page - 1) * ROWS_PER_PAGE;
+            const paginatedData = filteredData.slice(start, start + ROWS_PER_PAGE);
+
+            // Grouping paginated data by month
+            const groups = {};
+            paginatedData.forEach(item => {
+                const monthKey = item.date.toISOString().substring(0, 7);
+                const monthLabel = item.date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
+                if (!groups[monthKey]) groups[monthKey] = { label: monthLabel, items: [] };
+                groups[monthKey].items.push(item);
+            });
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th style="width: 40px"></th>
+                        <th>Date</th>
+                        <th>Référence</th>
+                        <th>Entrée</th>
+                        <th>Sortie</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0])).forEach(([key, group]) => {
+                const isCollapsed = collapsedMonths.has(key);
+                html += `
+                    <tr class="month-row" onclick="toggleMonth('${key}')">
+                        <td><button class="toggle-btn">${isCollapsed ? '+' : '-'}</button></td>
+                        <td colspan="5">${group.label} (${group.items.length} transactions)</td>
+                    </tr>
+                `;
+                if (!isCollapsed) {
+                    group.items.forEach(item => {
+                        html += `
+                            <tr>
+                                <td></td>
+                                <td>${item.date.toLocaleDateString('fr-FR')}</td>
+                                <td>${item.ref}</td>
+                                <td class="entry-text">${item.entree || '-'}</td>
+                                <td class="exit-text">${item.sortie || '-'}</td>
+                                <td>${item.note}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+
+            updatePagination(page, totalPages);
+        }
+
+        function toggleMonth(key) {
+            if (collapsedMonths.has(key)) collapsedMonths.delete(key);
+            else collapsedMonths.add(key);
+            updateTransactionsTab();
+        }
+
+        function updatePagination(current, total) {
+            const container = document.getElementById('pagination-controls');
+            container.innerHTML = '';
+            for (let i = 1; i <= total; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                if (i === current) btn.classList.add('active');
+                btn.onclick = () => updateTransactionsTab(i);
+                container.appendChild(btn);
+            }
+        }
+    </script>
+</body>
+</html>
