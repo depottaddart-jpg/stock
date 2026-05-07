@@ -208,6 +208,7 @@
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
             display: flex;
             flex-direction: column;
+            border-top: 5px solid transparent;
         }
 
         .ref-card .ref-header {
@@ -312,13 +313,13 @@
         .heatmap-table { width: 100%; border-collapse: separate; border-spacing: 4px; }
         .heatmap-table th { padding: 0.75rem; font-size: 0.7rem; background: transparent; text-align: center; font-weight: 800; color: var(--text-muted); }
         .heatmap-table td { padding: 1rem; text-align: center; border-radius: 8px; font-size: 0.75rem; font-weight: 800; border: none; }
-        .heatmap-row-header { text-align: left !important; font-weight: 800 !important; font-size: 0.85rem !important; color: var(--text-color); width: 140px; padding-left: 0.5rem !important; }
+        .heatmap-row-header { text-align: left !important; font-weight: 800 !important; font-size: 0.85rem !important; color: var(--text-color); width: 140px; padding-left: 0.5rem !important; border-left: 4px solid transparent; }
 
         .cell-empty { background-color: #f9fafb; color: #e5e7eb; }
-        .cell-low { background-color: #eff6ff; color: #3b82f6; }
-        .cell-mid { background-color: #bfdbfe; color: #2563eb; }
-        .cell-high { background-color: #3b82f6; color: #ffffff; }
-        .cell-vhigh { background-color: #1d4ed8; color: #ffffff; }
+        .cell-low { opacity: 0.4; }
+        .cell-mid { opacity: 0.7; }
+        .cell-high { opacity: 0.9; }
+        .cell-vhigh { opacity: 1; }
 
     </style>
 </head>
@@ -438,9 +439,21 @@
     </div>
 
     <script>
-        /**
-         * Formatte les valeurs numériques avec arrondi et suffixe 'k'
-         */
+        const PALETTE = [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#06b6d4', '#f97316', '#ec4899', '#6366f1', '#14b8a6',
+            '#4ade80', '#fb923c', '#818cf8', '#2dd4bf', '#f87171'
+        ];
+
+        function getReferenceColor(ref) {
+            let hash = 0;
+            for (let i = 0; i < ref.length; i++) {
+                hash = ref.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % PALETTE.length;
+            return PALETTE[index];
+        }
+
         function formatVal(val, options = {}) {
             const { isBadge = false, precision = 1, forceK = false, raw = false } = options;
             if (raw) return val.toLocaleString('en-US');
@@ -464,9 +477,6 @@
             return formatted;
         }
 
-        /**
-         * Calcule le badge de tendance
-         */
         function getTrendBadge(current, previous) {
             if (previous === undefined || previous === 0) return "";
             const diff = ((current - previous) / previous) * 100;
@@ -478,13 +488,13 @@
         let stockData = [];
         let globalStats = {};
         let refStats = {};
+        let refColors = {};
         let monthlyStats = {};
         let charts = {};
         let tableFilters = { search: '', ref: '' };
         let collapsedMonths = new Set();
         const ROWS_PER_PAGE = 20;
 
-        // Check for LocalStorage data on load
         window.addEventListener('load', () => {
             const savedData = localStorage.getItem('stockData');
             if (savedData) {
@@ -535,6 +545,7 @@
         function processDataFromStock() {
             globalStats = { totalEntree: 0, totalSortie: 0, net: 0, refs: new Set(), corrections: 0, withNote: 0, transactions: stockData.length };
             refStats = {};
+            refColors = {};
             monthlyStats = {};
 
             stockData.forEach(item => {
@@ -548,7 +559,10 @@
                 if (item.entree === 0 && item.sortie === 0 && item.note) globalStats.corrections++;
                 if (item.note) globalStats.withNote++;
 
-                if (!refStats[item.ref]) refStats[item.ref] = { entree: 0, sortie: 0, net: 0, count: 0, monthly: {} };
+                if (!refStats[item.ref]) {
+                    refStats[item.ref] = { entree: 0, sortie: 0, net: 0, count: 0, monthly: {} };
+                    refColors[item.ref] = getReferenceColor(item.ref);
+                }
                 refStats[item.ref].entree += item.entree;
                 refStats[item.ref].sortie += item.sortie;
                 refStats[item.ref].net = refStats[item.ref].entree - refStats[item.ref].sortie;
@@ -609,49 +623,20 @@
             const keys = Object.keys(monthlyStats).sort();
             const latestMonthKey = keys[keys.length - 1];
             const prevMonthKey = keys[keys.length - 2];
-
             const latest = monthlyStats[latestMonthKey];
             const prev = monthlyStats[prevMonthKey];
 
             const container = document.getElementById('global-kpis');
             container.innerHTML = `
-                <div class="kpi-card">
-                    <h3>Total Entrées</h3>
-                    <div class="value" style="color:var(--primary-color)">${formatVal(globalStats.totalEntree, {precision: 0})}</div>
-                    <div class="subtext">${globalStats.transactions} transactions</div>
-                </div>
-                <div class="kpi-card" style="border-top-color: var(--secondary-color)">
-                    <h3>Total Sorties</h3>
-                    <div class="value" style="color:var(--secondary-color)">${formatVal(globalStats.totalSortie, {precision: 0})}</div>
-                    <div class="subtext">${globalStats.transactions} transactions</div>
-                </div>
-                <div class="kpi-card" style="border-top-color: var(--success-color)">
-                    <h3>Dernier mois (Net)</h3>
-                    <div class="value" style="color:var(--success-color)">
-                        ${latest ? formatVal(latest.entree - latest.sortie, {isBadge: true}) : 'N/A'}
-                        ${latest && prev ? getTrendBadge(latest.entree - latest.sortie, prev.entree - prev.sortie) : ''}
-                    </div>
-                    <div class="subtext">${latest ? latest.label : ''} vs ${prev ? prev.label : ''}</div>
-                </div>
-                <div class="kpi-card" style="border-top-color: var(--warning-color)">
-                    <h3>Références</h3>
-                    <div class="value">${globalStats.refs.size}</div>
-                    <div class="subtext">${Array.from(globalStats.refs).slice(0,2).join(', ')}...</div>
-                </div>
-                <div class="kpi-card" style="border-top-color: #8b5cf6">
-                    <h3>Corrections</h3>
-                    <div class="value">${globalStats.corrections}</div>
-                    <div class="subtext">Ajustements manuels</div>
-                </div>
-                <div class="kpi-card" style="border-top-color: #06b6d4">
-                    <h3>Lignes avec note</h3>
-                    <div class="value">${globalStats.withNote}</div>
-                    <div class="subtext">sur ${globalStats.transactions} lignes</div>
-                </div>
+                <div class="kpi-card"><h3>Total Entrées</h3><div class="value" style="color:var(--primary-color)">${formatVal(globalStats.totalEntree, {precision: 0})}</div><div class="subtext">${globalStats.transactions} transactions</div></div>
+                <div class="kpi-card" style="border-top-color: var(--secondary-color)"><h3>Total Sorties</h3><div class="value" style="color:var(--secondary-color)">${formatVal(globalStats.totalSortie, {precision: 0})}</div><div class="subtext">${globalStats.transactions} transactions</div></div>
+                <div class="kpi-card" style="border-top-color: var(--success-color)"><h3>Dernier mois (Net)</h3><div class="value" style="color:var(--success-color)">${latest ? formatVal(latest.entree - latest.sortie, {isBadge: true}) : 'N/A'}${latest && prev ? getTrendBadge(latest.entree - latest.sortie, prev.entree - prev.sortie) : ''}</div><div class="subtext">${latest ? latest.label : ''} vs ${prev ? prev.label : ''}</div></div>
+                <div class="kpi-card" style="border-top-color: var(--warning-color)"><h3>Références</h3><div class="value">${globalStats.refs.size}</div><div class="subtext">${Array.from(globalStats.refs).slice(0,2).join(', ')}...</div></div>
+                <div class="kpi-card" style="border-top-color: #8b5cf6"><h3>Corrections</h3><div class="value">${globalStats.corrections}</div><div class="subtext">Ajustements manuels</div></div>
+                <div class="kpi-card" style="border-top-color: #06b6d4"><h3>Lignes avec note</h3><div class="value">${globalStats.withNote}</div><div class="subtext">sur ${globalStats.transactions} lignes</div></div>
             `;
 
             const refLabels = Array.from(globalStats.refs).sort();
-
             const ctxNetRef = document.getElementById('global-net-ref-chart').getContext('2d');
             if (charts.globalNetRef) charts.globalNetRef.destroy();
             charts.globalNetRef = new Chart(ctxNetRef, {
@@ -661,46 +646,35 @@
                     datasets: [{
                         label: 'Net',
                         data: refLabels.map(r => refStats[r].net),
-                        backgroundColor: refLabels.map(r => refStats[r].net >= 0 ? '#10b981' : '#ef4444'),
+                        backgroundColor: refLabels.map(r => refColors[r]),
                         borderRadius: 6
                     }]
                 },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => formatVal(v) } } }
-                }
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => formatVal(v) } } } }
             });
 
             const labels = keys.map(k => monthlyStats[k].label);
-
             const ctxGlobal = document.getElementById('global-chart').getContext('2d');
             if (charts.global) charts.global.destroy();
             charts.global = new Chart(ctxGlobal, {
                 type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Entrées', data: keys.map(k => monthlyStats[k].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'Sorties', data: keys.map(k => monthlyStats[k].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
-                    ]
-                },
-                options: { responsive: true, plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, font: { weight: 'bold' } } } }, scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => formatVal(v) } } } }
+                data: { labels: labels, datasets: [
+                    { label: 'Entrées', data: keys.map(k => monthlyStats[k].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
+                    { label: 'Sorties', data: keys.map(k => monthlyStats[k].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
+                ]},
+                options: { responsive: true, plugins: { legend: { position: 'top', align: 'start' } }, scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => formatVal(v) } } } }
             });
 
             const ctxNet = document.getElementById('net-monthly-chart').getContext('2d');
             if (charts.net) charts.net.destroy();
             charts.net = new Chart(ctxNet, {
                 type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Solde Net',
-                        data: keys.map(k => monthlyStats[k].entree - monthlyStats[k].sortie),
-                        backgroundColor: keys.map(k => (monthlyStats[k].entree - monthlyStats[k].sortie) >= 0 ? '#10b981' : '#ef4444'),
-                        borderRadius: 6
-                    }]
-                },
+                data: { labels: labels, datasets: [{
+                    label: 'Solde Net',
+                    data: keys.map(k => monthlyStats[k].entree - monthlyStats[k].sortie),
+                    backgroundColor: keys.map(k => (monthlyStats[k].entree - monthlyStats[k].sortie) >= 0 ? '#10b981' : '#ef4444'),
+                    borderRadius: 6
+                }]},
                 options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
             });
 
@@ -708,22 +682,15 @@
             if (charts.trans) charts.trans.destroy();
             charts.trans = new Chart(ctxTrans, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Transactions',
-                        data: keys.map(k => monthlyStats[k].trans),
-                        borderColor: '#06b6d4',
-                        backgroundColor: '#06b6d411',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 5,
-                        pointHoverRadius: 8,
-                        pointBackgroundColor: '#06b6d4',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2
-                    }]
-                },
+                data: { labels: labels, datasets: [{
+                    label: 'Transactions',
+                    data: keys.map(k => monthlyStats[k].trans),
+                    borderColor: '#06b6d4',
+                    backgroundColor: '#06b6d411',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5
+                }]},
                 options: { responsive: true, plugins: { legend: { display: false } } }
             });
         }
@@ -731,20 +698,18 @@
         function updateRefTab() {
             const container = document.getElementById('ref-container');
             container.innerHTML = '';
-
-            const filteredRefs = Object.entries(refStats)
-                .filter(([ref, stats]) => stats.net !== 0)
-                .sort((a, b) => a[0].localeCompare(b[0]));
+            const filteredRefs = Object.entries(refStats).filter(([ref, stats]) => stats.net !== 0).sort((a, b) => a[0].localeCompare(b[0]));
 
             filteredRefs.forEach(([ref, stats]) => {
                 const card = document.createElement('div');
                 card.className = 'ref-card';
+                card.style.borderTopColor = refColors[ref];
                 card.innerHTML = `
                     <div class="ref-header">
-                        <div class="ref-name">${ref}</div>
-                        <div class="badge badge-neutral">${formatVal(stats.entree, {forceK: false})} entrées</div>
+                        <div class="ref-name" style="color: ${refColors[ref]}">${ref}</div>
+                        <div class="badge badge-neutral">${formatVal(stats.entree)} entrées</div>
                     </div>
-                    <div class="ref-value" style="color: ${stats.net > 0 ? 'var(--success-color)' : (stats.net < 0 ? 'var(--secondary-color)' : 'var(--text-color)')}">
+                    <div class="ref-value" style="color: ${stats.net > 0 ? 'var(--success-color)' : 'var(--secondary-color)'}">
                         ${formatVal(stats.net, {isBadge: true})}
                     </div>
                     <div class="ref-info">Net • ${stats.count} lignes</div>
@@ -753,18 +718,14 @@
             });
 
             const refLabels = filteredRefs.map(r => r[0]);
-
             const ctxBars = document.getElementById('ref-bars-chart').getContext('2d');
             if (charts.refBars) charts.refBars.destroy();
             charts.refBars = new Chart(ctxBars, {
                 type: 'bar',
-                data: {
-                    labels: refLabels,
-                    datasets: [
-                        { label: 'Entrées', data: filteredRefs.map(r => r[1].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'Sorties', data: filteredRefs.map(r => r[1].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
-                    ]
-                },
+                data: { labels: refLabels, datasets: [
+                    { label: 'Entrées', data: filteredRefs.map(r => r[1].entree), backgroundColor: filteredRefs.map(r => refColors[r[0]]), borderRadius: 6 },
+                    { label: 'Sorties', data: filteredRefs.map(r => r[1].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
+                ]},
                 options: { responsive: true, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
             });
 
@@ -772,15 +733,12 @@
             if (charts.refNetBars) charts.refNetBars.destroy();
             charts.refNetBars = new Chart(ctxNetBars, {
                 type: 'bar',
-                data: {
-                    labels: refLabels,
-                    datasets: [{
-                        label: 'Net',
-                        data: filteredRefs.map(r => r[1].net),
-                        backgroundColor: filteredRefs.map(r => r[1].net >= 0 ? '#10b981' : '#ef4444'),
-                        borderRadius: 6
-                    }]
-                },
+                data: { labels: refLabels, datasets: [{
+                    label: 'Net',
+                    data: filteredRefs.map(r => r[1].net),
+                    backgroundColor: filteredRefs.map(r => refColors[r[0]]),
+                    borderRadius: 6
+                }]},
                 options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
             });
 
@@ -789,15 +747,16 @@
             refLabels.forEach((ref, idx) => {
                 const btn = document.createElement('button');
                 btn.className = 'filter-btn' + (idx === 0 ? ' active' : '');
+                btn.style.borderColor = idx === 0 ? refColors[ref] : '';
                 btn.textContent = ref;
                 btn.onclick = () => {
-                    document.querySelectorAll('#ref-filter-btns .filter-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('#ref-filter-btns .filter-btn').forEach(b => { b.classList.remove('active'); b.style.borderColor = ''; });
                     btn.classList.add('active');
+                    btn.style.borderColor = refColors[ref];
                     updateRefLineChart(ref);
                 };
                 selector.appendChild(btn);
             });
-
             if (refLabels.length > 0) updateRefLineChart(refLabels[0]);
         }
 
@@ -812,21 +771,17 @@
             if (charts.refLine) charts.refLine.destroy();
             charts.refLine = new Chart(ctxLine, {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Entrées', data: dataE, borderColor: '#3b82f6', backgroundColor: '#3b82f622', fill: false, tension: 0.4, pointRadius: 5 },
-                        { label: 'Sorties', data: dataS, borderColor: '#ef4444', backgroundColor: '#ef444422', fill: false, tension: 0.4, borderDash: [6, 6], pointRadius: 5 }
-                    ]
-                },
-                options: { responsive: true, plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, font: { weight: '700' } } } }, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
+                data: { labels: labels, datasets: [
+                    { label: 'Entrées', data: dataE, borderColor: refColors[refName], backgroundColor: refColors[refName]+'22', fill: true, tension: 0.4, pointRadius: 5 },
+                    { label: 'Sorties', data: dataS, borderColor: '#ef4444', borderDash: [6, 6], tension: 0.4, pointRadius: 5 }
+                ]},
+                options: { responsive: true, plugins: { legend: { position: 'top', align: 'start' } }, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
             });
         }
 
         function updateMonthlyTab(selectedMonthKey = null) {
             const keys = Object.keys(monthlyStats).sort();
             if (!selectedMonthKey && keys.length > 0) selectedMonthKey = keys[keys.length - 1];
-
             const filterContainer = document.getElementById('month-filters');
             filterContainer.innerHTML = '';
             keys.forEach(key => {
@@ -841,35 +796,14 @@
             const monthData = monthlyStats[selectedMonthKey];
             const idx = keys.indexOf(selectedMonthKey);
             const prevData = idx > 0 ? monthlyStats[keys[idx-1]] : null;
-
             document.getElementById('month-name-display').textContent = monthData.fullLabel;
 
             const sidebar = document.getElementById('month-summary-sidebar');
             const net = monthData.entree - monthData.sortie;
-            const prevNet = prevData ? prevData.entree - prevData.sortie : 0;
-
             sidebar.innerHTML = `
-                <div class="summary-item entrees">
-                    <span class="label">Entrées</span>
-                    <div class="val" style="color:var(--primary-color)">
-                        ${formatVal(monthData.entree)}
-                        ${getTrendBadge(monthData.entree, prevData ? prevData.entree : 0)}
-                    </div>
-                </div>
-                <div class="summary-item sorties">
-                    <span class="label">Sorties</span>
-                    <div class="val" style="color:var(--secondary-color)">
-                        ${formatVal(monthData.sortie)}
-                        ${getTrendBadge(monthData.sortie, prevData ? prevData.sortie : 0)}
-                    </div>
-                </div>
-                <div class="summary-item net">
-                    <span class="label">Net</span>
-                    <div class="val" style="color:var(--success-color)">
-                        ${formatVal(net, {isBadge: true})}
-                        ${getTrendBadge(net, prevNet)}
-                    </div>
-                </div>
+                <div class="summary-item entrees"><span class="label">Entrées</span><div class="val" style="color:var(--primary-color)">${formatVal(monthData.entree)}${getTrendBadge(monthData.entree, prevData ? prevData.entree : 0)}</div></div>
+                <div class="summary-item sorties"><span class="label">Sorties</span><div class="val" style="color:var(--secondary-color)">${formatVal(monthData.sortie)}${getTrendBadge(monthData.sortie, prevData ? prevData.sortie : 0)}</div></div>
+                <div class="summary-item net"><span class="label">Net</span><div class="val" style="color:var(--success-color)">${formatVal(net, {isBadge: true})}${getTrendBadge(net, prevData ? prevData.entree - prevData.sortie : 0)}</div></div>
                 <div style="font-size:0.85rem; color:var(--text-muted); margin-top: 1rem; text-align: center; font-weight: 600;">${monthData.trans} transactions</div>
             `;
 
@@ -878,16 +812,12 @@
             if (charts.monthly) charts.monthly.destroy();
             charts.monthly = new Chart(ctx, {
                 type: 'bar',
-                data: {
-                    labels: refs,
-                    datasets: [
-                        { label: 'Entrées', data: refs.map(r => monthData.refs[r].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'Sorties', data: refs.map(r => monthData.refs[r].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
-                    ]
-                },
+                data: { labels: refs, datasets: [
+                    { label: 'Entrées', data: refs.map(r => monthData.refs[r].entree), backgroundColor: refs.map(r => refColors[r]), borderRadius: 6 },
+                    { label: 'Sorties', data: refs.map(r => monthData.refs[r].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
+                ]},
                 options: { responsive: true, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
             });
-
             updateHeatmap();
         }
 
@@ -895,25 +825,19 @@
             const container = document.getElementById('heatmap-container');
             const keys = Object.keys(monthlyStats).sort();
             const refLabels = Array.from(globalStats.refs).sort();
-
             let html = '<table class="heatmap-table"><thead><tr><th>RÉF</th>';
             keys.forEach(k => html += `<th>${monthlyStats[k].label}</th>`);
             html += '</tr></thead><tbody>';
-
             refLabels.forEach(ref => {
-                html += `<tr><td class="heatmap-row-header">${ref}</td>`;
+                html += `<tr><td class="heatmap-row-header" style="border-left-color: ${refColors[ref]}">${ref}</td>`;
                 keys.forEach(k => {
                     const val = (refStats[ref].monthly[k] ? refStats[ref].monthly[k].entree : 0);
                     let cls = "cell-empty";
-                    if (val > 50000) cls = "cell-vhigh";
-                    else if (val > 25000) cls = "cell-high";
-                    else if (val > 10000) cls = "cell-mid";
-                    else if (val > 0) cls = "cell-low";
-                    html += `<td class="${cls}">${val > 0 ? formatVal(val) : ""}</td>`;
+                    if (val > 50000) cls = "cell-vhigh"; else if (val > 25000) cls = "cell-high"; else if (val > 10000) cls = "cell-mid"; else if (val > 0) cls = "cell-low";
+                    html += `<td class="${cls}" style="${val > 0 ? 'background-color:' + refColors[ref] : ''}">${val > 0 ? formatVal(val) : ""}</td>`;
                 });
                 html += '</tr>';
             });
-
             html += '</tbody></table>';
             container.innerHTML = html;
         }
@@ -925,11 +849,9 @@
                 const matchesRef = !tableFilters.ref || item.ref === tableFilters.ref;
                 return matchesSearch && matchesRef;
             });
-
             const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
             const start = (page - 1) * ROWS_PER_PAGE;
             const paginatedData = filteredData.slice(start, start + ROWS_PER_PAGE);
-
             const groups = {};
             paginatedData.forEach(item => {
                 const monthKey = item.date.toISOString().substring(0, 7);
@@ -937,27 +859,23 @@
                 if (!groups[monthKey]) groups[monthKey] = { label: monthLabel, items: [] };
                 groups[monthKey].items.push(item);
             });
-
             let html = `<table><thead><tr><th style="width: 50px"></th><th>Date</th><th>Référence</th><th>Entrée</th><th>Sortie</th><th>Note</th></tr></thead><tbody>`;
-
             Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0])).forEach(([key, group]) => {
                 const isCollapsed = collapsedMonths.has(key);
                 html += `<tr class="month-row" onclick="toggleMonth('${key}')"><td style="text-align:center">${isCollapsed ? '+' : '−'}</td><td colspan="5">${group.label} <span style="font-weight:400; color:var(--text-muted); margin-left:1.5rem; font-size: 0.8rem;">${group.items.length} transactions</span></td></tr>`;
                 if (!isCollapsed) {
                     group.items.forEach(item => {
-                        html += `<tr><td></td><td style="color:var(--text-muted)">${item.date.toLocaleDateString('en-US')}</td><td style="font-weight:700">${item.ref}</td><td class="entry-text">${item.entree || '—'}</td><td class="exit-text">${item.sortie || '—'}</td><td style="font-size:0.8rem; color:var(--text-muted); font-style: italic;">${item.note}</td></tr>`;
+                        html += `<tr><td></td><td style="color:var(--text-muted)">${item.date.toLocaleDateString('en-US')}</td><td style="font-weight:700; color:${refColors[item.ref]}">${item.ref}</td><td class="entry-text">${item.entree || '—'}</td><td class="exit-text">${item.sortie || '—'}</td><td style="font-size:0.8rem; color:var(--text-muted); font-style: italic;">${item.note}</td></tr>`;
                     });
                 }
             });
-
             html += '</tbody></table>';
             container.innerHTML = html;
             updatePagination(page, totalPages);
         }
 
         function toggleMonth(key) {
-            if (collapsedMonths.has(key)) collapsedMonths.delete(key);
-            else collapsedMonths.add(key);
+            if (collapsedMonths.has(key)) collapsedMonths.delete(key); else collapsedMonths.add(key);
             updateTransactionsTab();
         }
 
@@ -965,12 +883,9 @@
             const container = document.getElementById('pagination-controls');
             container.innerHTML = '';
             if (total <= 1) return;
-
             const maxVisible = 5;
-            let start = Math.max(1, current - 2);
-            let end = Math.min(total, start + maxVisible - 1);
+            let start = Math.max(1, current - 2), end = Math.min(total, start + maxVisible - 1);
             if (end === total) start = Math.max(1, end - maxVisible + 1);
-
             for (let i = start; i <= end; i++) {
                 const btn = document.createElement('button');
                 btn.textContent = i;
