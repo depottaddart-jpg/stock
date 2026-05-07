@@ -410,7 +410,6 @@
             const abs = Math.abs(val);
             let formatted = "";
 
-            // On utilise 'k' si >= 1000, sauf si précisé autrement
             if (abs >= 1000 || forceK) {
                 const kVal = val / 1000;
                 formatted = kVal.toLocaleString('en-US', {
@@ -648,24 +647,30 @@
         function updateRefTab() {
             const container = document.getElementById('ref-container');
             container.innerHTML = '';
-            const sortedRefs = Object.entries(refStats).sort();
 
-            sortedRefs.forEach(([ref, stats]) => {
-                const isPos = stats.net >= 0;
+            // Filter out refs with net balance of 0
+            const filteredRefs = Object.entries(refStats)
+                .filter(([ref, stats]) => stats.net !== 0)
+                .sort((a, b) => a[0].localeCompare(b[0]));
+
+            filteredRefs.forEach(([ref, stats]) => {
+                const isPos = stats.net > 0;
                 const card = document.createElement('div');
                 card.className = 'ref-card';
                 card.innerHTML = `
                     <div class="ref-header">
                         <div class="ref-name">${ref}</div>
-                        <div class="badge ${isPos ? 'badge-success' : 'badge-danger'}">${formatVal(stats.net, {isBadge: true})} net</div>
+                        <div class="badge badge-neutral">${formatVal(stats.entree, {forceK: false})} entrées</div>
                     </div>
-                    <div class="ref-value">${formatVal(stats.entree)}</div>
-                    <div class="ref-info">Entrées • ${stats.count} lignes</div>
+                    <div class="ref-value" style="color: ${stats.net > 0 ? 'var(--success-color)' : (stats.net < 0 ? 'var(--secondary-color)' : 'var(--text-color)')}">
+                        ${formatVal(stats.net, {isBadge: true})}
+                    </div>
+                    <div class="ref-info">Net • ${stats.count} lignes</div>
                 `;
                 container.appendChild(card);
             });
 
-            const refLabels = sortedRefs.map(r => r[0]);
+            const refLabels = filteredRefs.map(r => r[0]);
 
             const ctxBars = document.getElementById('ref-bars-chart').getContext('2d');
             if (charts.refBars) charts.refBars.destroy();
@@ -674,8 +679,8 @@
                 data: {
                     labels: refLabels,
                     datasets: [
-                        { label: 'Entrées', data: sortedRefs.map(r => r[1].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
-                        { label: 'Sorties', data: sortedRefs.map(r => r[1].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
+                        { label: 'Entrées', data: filteredRefs.map(r => r[1].entree), backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Sorties', data: filteredRefs.map(r => r[1].sortie), backgroundColor: '#ef4444', borderRadius: 6 }
                     ]
                 },
                 options: { responsive: true, scales: { y: { ticks: { callback: v => formatVal(v) } } } }
@@ -689,8 +694,8 @@
                     labels: refLabels,
                     datasets: [{
                         label: 'Net',
-                        data: sortedRefs.map(r => r[1].net),
-                        backgroundColor: sortedRefs.map(r => r[1].net >= 0 ? '#10b981' : '#ef4444'),
+                        data: filteredRefs.map(r => r[1].net),
+                        backgroundColor: filteredRefs.map(r => r[1].net >= 0 ? '#10b981' : '#ef4444'),
                         borderRadius: 6
                     }]
                 },
