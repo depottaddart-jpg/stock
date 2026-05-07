@@ -146,6 +146,11 @@
             margin-bottom: 2rem;
         }
 
+        .full-width-chart {
+            grid-column: span 2;
+            margin-bottom: 1.5rem;
+        }
+
         .chart-card {
             background: var(--card-bg);
             padding: 2rem;
@@ -312,18 +317,17 @@
         <!-- VUE GLOBALE -->
         <div id="vue-globale" class="tab-content active">
             <div class="kpi-grid" id="global-kpis"></div>
-            <div class="grid-layout">
-                <div class="chart-card">
-                    <h4>Entrées vs Sorties – Évolution mensuelle</h4>
-                    <canvas id="global-chart" height="150"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h4>Répartition des entrées par référence</h4>
-                    <div style="height: 280px; display: flex; align-items: center; justify-content: center; position: relative;">
-                        <canvas id="distribution-chart"></canvas>
-                    </div>
-                </div>
+
+            <div class="chart-card full-width-chart">
+                <h4>Net par référence</h4>
+                <canvas id="global-net-ref-chart" height="80"></canvas>
             </div>
+
+            <div class="chart-card full-width-chart">
+                <h4>Entrées vs Sorties – Évolution mensuelle</h4>
+                <canvas id="global-chart" height="80"></canvas>
+            </div>
+
             <div class="grid-layout">
                 <div class="chart-card">
                     <h4>Solde net mensuel</h4>
@@ -401,7 +405,6 @@
     <script>
         /**
          * Formatte les valeurs numériques avec arrondi et suffixe 'k'
-         * Utilise le style des captures d'écran
          */
         function formatVal(val, options = {}) {
             const { isBadge = false, precision = 1, forceK = false, raw = false } = options;
@@ -570,6 +573,29 @@
                 </div>
             `;
 
+            const refLabels = Array.from(globalStats.refs).sort();
+
+            // Net par référence (Full width histogram)
+            const ctxNetRef = document.getElementById('global-net-ref-chart').getContext('2d');
+            if (charts.globalNetRef) charts.globalNetRef.destroy();
+            charts.globalNetRef = new Chart(ctxNetRef, {
+                type: 'bar',
+                data: {
+                    labels: refLabels,
+                    datasets: [{
+                        label: 'Net',
+                        data: refLabels.map(r => refStats[r].net),
+                        backgroundColor: refLabels.map(r => refStats[r].net >= 0 ? '#10b981' : '#ef4444'),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => formatVal(v) } } }
+                }
+            });
+
             const keys = Object.keys(monthlyStats).sort();
             const labels = keys.map(k => monthlyStats[k].label);
 
@@ -585,23 +611,6 @@
                     ]
                 },
                 options: { responsive: true, plugins: { legend: { position: 'top', align: 'start', labels: { usePointStyle: true, boxWidth: 8, font: { weight: 'bold' } } } }, scales: { y: { grid: { borderDash: [5, 5] }, ticks: { callback: v => formatVal(v) } } } }
-            });
-
-            const ctxDist = document.getElementById('distribution-chart').getContext('2d');
-            if (charts.dist) charts.dist.destroy();
-            const refLabels = Array.from(globalStats.refs).sort();
-            charts.dist = new Chart(ctxDist, {
-                type: 'doughnut',
-                data: {
-                    labels: refLabels,
-                    datasets: [{
-                        data: refLabels.map(r => refStats[r].entree),
-                        backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'],
-                        borderWidth: 0,
-                        hoverOffset: 15
-                    }]
-                },
-                options: { responsive: true, cutout: '80%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { weight: '600' } } } } }
             });
 
             const ctxNet = document.getElementById('net-monthly-chart').getContext('2d');
@@ -654,7 +663,6 @@
                 .sort((a, b) => a[0].localeCompare(b[0]));
 
             filteredRefs.forEach(([ref, stats]) => {
-                const isPos = stats.net > 0;
                 const card = document.createElement('div');
                 card.className = 'ref-card';
                 card.innerHTML = `
